@@ -1,7 +1,7 @@
 {
   "name": "nomenjanahary/cache-control",
   "type": "library",
-  "description": "Cache control that can be overriden in regard to last update time",
+  "description": "Cache control that can be overridden in regard to last update time",
   "keywords": ["cache", "php", "cache-control"],
   "license": "MIT",
   "authors": [
