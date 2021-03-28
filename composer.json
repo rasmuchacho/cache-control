@@ -1,5 +1,5 @@
 {
-  "name": "nomenjanahary/cache-control",
+  "name": "rasmuchacho/cache-control",
   "type": "library",
   "description": "Cache control that can be overridden in regard to last update time",
   "keywords": ["cache", "php", "cache-control"],
