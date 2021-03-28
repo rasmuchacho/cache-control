@@ -4,7 +4,6 @@
 namespace Storage\CacheControlBundle\Reader;
 
 use Storage\CacheControlBundle\Annotation\Cache;
-use Storage\CacheControlBundle\Constraint\TimeMeasurableInterface;
 use Symfony\Component\HttpFoundation\Request;
 
 /**
@@ -15,6 +14,7 @@ use Symfony\Component\HttpFoundation\Request;
 class CacheValueOverrider
 {
     const OVERRIDE_MERGE = 'merge';
+
     const OVERRIDE_REPLACE = 'replace';
 
     const CACHE_CONFIG_LEVEL_LOWEST = 0;
@@ -23,6 +23,11 @@ class CacheValueOverrider
 
     const CACHE_CONFIG_LEVEL_HIGHEST = 2;
 
+    /**
+     * CacheValueOverrider cacheConfig
+     *
+     * @var array
+     */
     private $cacheConfig = [];
 
     /**
@@ -68,6 +73,8 @@ class CacheValueOverrider
      * @param Request $request
      *
      * @return Cache
+     *
+     * @throws \Exception
      */
     public function measureFromRequest(Request $request): Cache
     {
@@ -86,6 +93,8 @@ class CacheValueOverrider
      * applyOverride
      *
      * @return Cache
+     *
+     * @throws \Exception
      */
     protected function applyOverride(): Cache
     {
