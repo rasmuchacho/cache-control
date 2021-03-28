@@ -7,7 +7,6 @@ use Doctrine\Common\Annotations\AnnotationReader;
 use Storage\CacheControlBundle\Annotation\Cache;
 use Storage\CacheControlBundle\Reader\CacheValueOverrider;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -142,6 +141,7 @@ class CacheControlSubscriber implements EventSubscriberInterface
     {
         $cacheRule = $cache->value;
 
+        // Remove persisting cache control values
         $response->headers->removeCacheControlDirective('must-revalidate');
         $response->headers->removeCacheControlDirective('max-age');
         $response->headers->remove('last-modified');
@@ -150,23 +150,17 @@ class CacheControlSubscriber implements EventSubscriberInterface
             $normalizedKey = $this->normalizeKey($key);
             $setMethod = 'set'.ucfirst($key);
             switch ($normalizedKey) {
-                case 'last-modified':
-                case 'max-age':
-                case 'shared-max-age':
-                case 'private':
-                case 'public':
-                case 'vary':
-                case 'etag':
+                case 'must-revalidate':
+                    if ((boolean) $value) {
+                        $response->headers->addCacheControlDirective($normalizedKey);
+                    }
+
+                    break;
+                default:
                     if (is_bool($value) && $value) {
                         $response->{$setMethod}();
                     } elseif (!is_bool($value) && !empty($value)) {
                         $response->{$setMethod}($value);
-                    }
-
-                    break;
-                case 'must-revalidate':
-                    if ((boolean) $value) {
-                        $response->headers->addCacheControlDirective($normalizedKey);
                     }
 
                     break;
@@ -176,6 +170,13 @@ class CacheControlSubscriber implements EventSubscriberInterface
         return $this;
     }
 
+    /**
+     * normalizeKey
+     *
+     * @param string $key
+     *
+     * @return string
+     */
     protected function normalizeKey($key)
     {
         return preg_replace_callback(',(?<camel>[A-Z]),', function ($match)
