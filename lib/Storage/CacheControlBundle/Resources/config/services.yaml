@@ -1,0 +1,10 @@
+services:
+  Storage\CacheControlBundle\Listener\CacheControlSubscriber:
+    autoconfigure: true
+    autowire: true
+    arguments:
+      $excludeStatus: '%storage_cache_control.exclude_status%'
+      $defaultCache: '%storage_cache_control.default_cache%'
+      $overrideStrategy:  '%storage_cache_control.override_strategy%'
+      $overrideDefinition:  '%storage_cache_control.override%'
+    tags: [kernel.event_subscriber]
