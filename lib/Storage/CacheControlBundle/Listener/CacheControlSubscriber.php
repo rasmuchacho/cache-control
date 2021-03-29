@@ -102,7 +102,7 @@ class CacheControlSubscriber implements EventSubscriberInterface
         $request = $responseEvent->getRequest();
         $controller = $request->attributes->get('_controller');
 
-        [$controller, $action] = explode('::', $controller);
+        [$controller, $action] = explode('::', $controller.'::');
         if (!class_exists($controller)) {
             return;
         }

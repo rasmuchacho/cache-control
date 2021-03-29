@@ -2,7 +2,7 @@ Installation
 ============
 
 ```
-composer require nomenjanahary/cache-control
+composer require rasmuchacho/cache-control
 ```
 
 ### Configuration
@@ -29,14 +29,12 @@ storage_cache_control:
 ```
 
 
-### Specify cache control on all controller
+### Specify cache control for the controller
 ```php
 use Storage\CacheControlBundle\Annotation as StorageCache;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 /**
- * ...
- *
  * @StorageCache\Cache({
  *     "maxAge": 200,
  *     "sharedMaxAge": 200,
@@ -49,7 +47,7 @@ class MyController extends AbstractController
 }
 ```
 
-### Specify cache control on an action
+### Specify cache control on a specified action
 ```php
 use Storage\CacheControlBundle\Annotation as StorageCache;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -58,9 +56,6 @@ class MyController extends AbstractController
 {
 
     /**
-     * myAction
-     * ...
-     *
      * @StorageCache\Cache({
      *     "maxAge": 200,
      *     "sharedMaxAge": 200,
@@ -69,35 +64,191 @@ class MyController extends AbstractController
      */
     public function myAction()
     {
-    
     }
 
 }
 ```
 ## Override cache control
+### Override priority
+`yaml` is overridable by `controller annotation` which is overridable by `action annotation`
+
 ### Override in regard to last update time
 ```php
     /**
-     * ...
-     *
      * @StorageCache\Cache({
-     *     "maxAge": 200,
-     *     "sharedMaxAge": 200,
-     *     "public": true,
+     *     "maxAge": 3600,
+     *     "public": true
      * },
      * override={
-     *     "1Y": {
-     *         "maxAge": 90000,
-     *         "sharedMaxAge": 90000,
-     *         "public": true
+     *     "1D": {
+     *         "maxAge": 259200,
      *     },
-     *     "3M": {
-     *         "maxAge": 30000,
-     *         "sharedMaxAge": 30000,
-     *         "public": true
+     *     "3D": {
+     *         "maxAge": 2592000,
      *     }
      * })
      */
 ```
-### Override from global configuration to latest specified one
-`yaml` is overridable by `controller annotation` which is overridable by `action annotation`
+To select the right override values, it checks on possible value list by comparing the value of `lastModified` of returned `Response`
+
+```
+    public function show()
+    {
+        return (new Response())
+            ->setLastModified(new \DateTime('2021-03-29 00:00:00'));
+    }
+```
+We can have these results :
+
+* Before 30/03/2021
+
+```
+Cache-Control: max-age=3600, public
+```
+
+* After 30/03/2021 and before 01/04/2021
+
+```
+Cache-Control: max-age=259200, public
+```
+
+* After 01/04/2021
+
+```
+Cache-Control: max-age=25920000, public
+```
+
+### Specify which parameter is taken as reference
+Ensure that this object has method `getLastModified()` that returns `\DateTimeInterface` or implements `Storage\CacheControlBundle\Constraint\TimeMeasurableInterface`
+
+```php
+
+use Storage\CacheControlBundle\Constraint\TimeMeasurableInterface;
+
+class BlogArticle implements TimeMeasurableInterface
+{
+    public function getLastModified(): ?\DateTimeInterface
+    {
+        // return article last modified
+    }
+}
+```
+Determine cache control by the request passed parameter
+
+```php
+    /**
+     * @StorageCache\Cache({
+     *     "maxAge": 3600,
+     *     "public": true,
+     *     "vary": "Accept"
+     * },
+     * timestampedParameter="article",
+     * override={
+     *     "1D": {
+     *         "maxAge": 259200,
+     *     },
+     *     "3D": {
+     *         "maxAge": 2592000,
+     *     }
+     * })
+     *
+     * @Route("/{article}", name="blog_article_show")
+     */
+    public function show(BlogArticle $article)
+    {
+    }
+```
+### Override strategy
+You can use two kind of override strategy `merge`to merge config and `replace` to just replace configuration
+Use of override strategy :
+
+__Merge__ (you can also use constant`Storage\CacheControlBundle\Reader\CacheValueOverrider::OVERRIDE_MERGE`)
+
+* Yaml
+
+```yaml
+storage_cache_control:
+  default_cache:
+    maxAge: 3600
+    public: true
+  override_strategy: merge
+  override:
+    "1D":
+      maxAge: 259200
+```
+
+* Annotation on a controller or on an action
+
+```php
+    /**
+     * @StorageCache\Cache({
+     *     "maxAge": 3600
+     *     "public": true
+     * },
+     * overrideStrategy="merge",
+     * override={
+     *     "1D": {
+     *         "maxAge": 259200
+     *     }
+     * })
+```
+
+**_Result_** :
+
+We can have this cache-control value
+
+```
+Cache-Control: max-age=3600, public
+```
+
+And after one day
+
+```
+Cache-Control: max-age=259200, public
+```
+
+
+__Replace__ (you can also use constant `Storage\CacheControlBundle\Reader\CacheValueOverrider::OVERRIDE_REPLACE`)
+
+* Yaml
+
+```yaml
+storage_cache_control:
+  default_cache:
+    mustRevalidate: true
+  override_strategy: replace
+  override:
+    "1D":
+      maxAge: 259200
+      public: true
+```
+
+* Annotation on a controller or on an action
+
+```php
+    /**
+     * @StorageCache\Cache({
+     *     "mustRevalidate": true
+     * },
+     * overrideStrategy="replace",
+     * override={
+     *     "1D": {
+     *         "maxAge": 259200,
+     *         "public": true
+     *     }
+     * })
+```
+
+**_Result_** :
+
+We can have this cache-control value
+
+```
+Cache-Control: must-revalidate, private
+```
+
+And after one day
+
+```
+Cache-Control: max-age=259200, public
+```
